@@ -2,6 +2,6 @@ language: python
 install:
   - pip install coveralls
 script:
-  coverage run --source=tinymbc.py test_tinymbc.py
+  coverage run --include tinymbc.py test_tinymbc.py
 after_success:
   coveralls
