@@ -1,2 +1,7 @@
 language: python
-script: python3 -m unittest discover
+install:
+  - pip install coveralls
+script:
+  coverage run --source=tinymbc.py test_tinymbc.py
+after_success:
+  coveralls
