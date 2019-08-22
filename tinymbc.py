@@ -21,7 +21,7 @@ from random import randint
 # CONVERSION FUNCTIONS
 #-----------------------------------------------------------------------------------------------
 def uint16ToInt16(ui):
-    if (ui < 0 or ui > 65536):
+    if (ui < 0 or ui >= 65536 or not isinstance(ui, int)):
         raise ValueError
     if (ui > 32767):
         return ui - 65536
@@ -256,73 +256,72 @@ class ReadoutResultSet:
 ## THE ACTUAL SCRIPT
 ################################################################################################
 
-#-----------------------------------------------------------------------------------------------
-# COMMAND LINE PARSING 
-#-----------------------------------------------------------------------------------------------
-parser = argparse.ArgumentParser(description="Perform a read or write operation on some Modbus TCP server", 
-                                 epilog="Examples:\n"
-                                 "tinymb.py read 1-10,42-99,101,40123     # read all these registers\n"
-                                 "tinymb.py write 17=42                   # write 42 to reg. 17\n"
-                                 "tinymb.py write 17=0x42,42=17           # write 0x42 to reg. 17 and 17 to reg. 42\n",
-                                 formatter_class=argparse.RawDescriptionHelpFormatter
-                                 )
-parser.add_argument("-v", "--verbose",  help="increase output verbosity",    
-                                        action="store_true")
-parser.add_argument("-s", "--server",   type=str, help="Modbus server to connect to",  
-                                        default="localhost")
-parser.add_argument("-u", "--unitid",   type=int, help="Modbus unit ID to connect to", 
-                                        default=1)
-parser.add_argument("-o", "--output",   type=str, help="Output format: just the 'plain' results or a nice 'table'",               
-                                        default="table", choices=["table", "plain"])
-parser.add_argument("-d", "--datatype", type=str, help="Datatype to interpret results as (ignored for output formats other than 'plain')", 
-                                        choices=["int", "uint", "chr", "hex"])
-parser.add_argument("-t", "--timeout",  type=int, help="Timeout in seconds for each single Modbus query to complete (0: no timeout)", 
-                                        default=5, choices=range(0, 61))
-parser.add_argument("operation",        type=str, help="operation to perform",         
-                                        choices=["read", "write"])
-parser.add_argument("registers",        type=str, help="group of registers[=values] to read/write from/to; grouping is only supported for read-operations. See examples below.")
+if __name__ == '__main__':
+    #-----------------------------------------------------------------------------------------------
+    # COMMAND LINE PARSING 
+    #-----------------------------------------------------------------------------------------------
+    parser = argparse.ArgumentParser(description="Perform a read or write operation on some Modbus TCP server", 
+                                     epilog="Examples:\n"
+                                     "tinymb.py read 1-10,42-99,101,40123     # read all these registers\n"
+                                     "tinymb.py write 17=42                   # write 42 to reg. 17\n"
+                                     "tinymb.py write 17=0x42,42=17           # write 0x42 to reg. 17 and 17 to reg. 42\n",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter
+                                     )
+    parser.add_argument("-v", "--verbose",  help="increase output verbosity",    
+                                            action="store_true")
+    parser.add_argument("-s", "--server",   type=str, help="Modbus server to connect to",  
+                                            default="localhost")
+    parser.add_argument("-u", "--unitid",   type=int, help="Modbus unit ID to connect to", 
+                                            default=1)
+    parser.add_argument("-o", "--output",   type=str, help="Output format: just the 'plain' results or a nice 'table'",               
+                                            default="table", choices=["table", "plain"])
+    parser.add_argument("-d", "--datatype", type=str, help="Datatype to interpret results as (ignored for output formats other than 'plain')", 
+                                            choices=["int", "uint", "chr", "hex"])
+    parser.add_argument("-t", "--timeout",  type=int, help="Timeout in seconds for each single Modbus query to complete (0: no timeout)", 
+                                            default=5, choices=range(0, 61))
+    parser.add_argument("operation",        type=str, help="operation to perform",         
+                                            choices=["read", "write"])
+    parser.add_argument("registers",        type=str, help="group of registers[=values] to read/write from/to; grouping is only supported for read-operations. See examples below.")
 
-args = parser.parse_args()
-regGroups = args.registers.split(",")
+    args = parser.parse_args()
+    regGroups = args.registers.split(",")
 
-
-#-----------------------------------------------------------------------------------------------
-# MODBUS CONNECTION ESTABLISHMENT 
-#-----------------------------------------------------------------------------------------------
-try:
-    if (args.verbose): print("Will try to connect to unit {} on {}:502 ..."
-                       .format(args.unitid, args.server))
-    client = client(host=args.server, unitid=args.unitid, timeout=args.timeout)
-    if (args.verbose): print("... connected!")
-except ConnectionRefusedError:
-    sys.exit("Could not connect to server! Please check connection details.")
-
-
-#-----------------------------------------------------------------------------------------------
-# MODBUS OPERATION 
-#-----------------------------------------------------------------------------------------------
-if (args.operation == "read"):
-    resultSet = []
+    #-----------------------------------------------------------------------------------------------
+    # MODBUS CONNECTION ESTABLISHMENT 
+    #-----------------------------------------------------------------------------------------------
     try:
-        performReadout(regGroups, args, client, resultSet)
+        if (args.verbose): print("Will try to connect to unit {} on {}:502 ..."
+                           .format(args.unitid, args.server))
+        client = client(host=args.server, unitid=args.unitid, timeout=args.timeout)
+        if (args.verbose): print("... connected!")
+    except ConnectionRefusedError:
+        sys.exit("Could not connect to server! Please check connection details.")
 
-    except ValueError:
-        sys.exit("Invalid input! Probably invalid register definition. You might want to run with option '--verbose'.")
-    except socket.timeout:
-        sys.exit("Did not receive reply in due time! Maybe wrong unit ID? You might want to run with option '--verbose'.")
-    except UserWarning: 
-        sys.exit("Did not receive any results! Did you try to read non-supported registers? You might want to run with option '--verbose'.")
+    #-----------------------------------------------------------------------------------------------
+    # MODBUS OPERATION 
+    #-----------------------------------------------------------------------------------------------
+    if (args.operation == "read"):
+        resultSet = []
+        try:
+            performReadout(regGroups, args, client, resultSet)
 
-    if (args.verbose): print("Received {} sets of results".format(len(resultSet)))
+        except ValueError:
+            sys.exit("Invalid input! Probably invalid register definition. You might want to run with option '--verbose'.")
+        except socket.timeout:
+            sys.exit("Did not receive reply in due time! Maybe wrong unit ID? You might want to run with option '--verbose'.")
+        except UserWarning: 
+            sys.exit("Did not receive any results! Did you try to read non-supported registers? You might want to run with option '--verbose'.")
 
-    if (args.output == "table"):   printAsTable(resultSet)
-    elif (args.output == "plain"): printAsPlain(resultSet)
+        if (args.verbose): print("Received {} sets of results".format(len(resultSet)))
 
-elif (args.operation == "write"):
-    try:
-        performWrite(regGroups, args, client)
+        if (args.output == "table"):   printAsTable(resultSet)
+        elif (args.output == "plain"): printAsPlain(resultSet)
 
-    except socket.timeout:
-        sys.exit("Did not receive reply in due time! Maybe wrong unit ID? You might want to run with option '--verbose'.")
-    except ValueError:
-        print("Something went wrong while writing. You might want to run with option '--verbose'.")
+    elif (args.operation == "write"):
+        try:
+            performWrite(regGroups, args, client)
+
+        except socket.timeout:
+            sys.exit("Did not receive reply in due time! Maybe wrong unit ID? You might want to run with option '--verbose'.")
+        except ValueError:
+            print("Something went wrong while writing. You might want to run with option '--verbose'.")
