@@ -19,6 +19,19 @@ class TestConversionMethods(unittest.TestCase):
         self.assertRaises(ValueError, tinymbc.int16ToUint16, -32769)
         self.assertRaises(ValueError, tinymbc.int16ToUint16, 32768)
 
+    def test_modbusExceptionCodeToString(self):
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(0), "Unknown exception code")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(-1), "Unknown exception code")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(1234), "Unknown exception code")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(1), "Illegal Function Code")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(2), "Illegal Data Address")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(3), "Illegal Data Value")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(4), "Server Failure")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(5), "Acknowledge")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(6), "Server Busy")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(10), "Gateway Problem (0x0A)")
+        self.assertEqual(tinymbc.modbusExceptionCodeToString(11), "Gateway Problem (0x0B)")
+
 if __name__ == '__main__':
     unittest.main()
 
