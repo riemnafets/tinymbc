@@ -1,5 +1,7 @@
 # tinymbc - The tiny Modbus TCP client
 
+[![Build Status](https://travis-ci.com/riemnafets/tinymbc.svg?branch=master)](https://travis-ci.com/riemnafets/tinymbc)
+
 tinymbc aims to be for Modbus TCP what curl is for HTTP: an ergonomic, non-interactive command line interface to the underlying protocol for easy manual or scripted usage.
 
 ## Usage
