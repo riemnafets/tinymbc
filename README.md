@@ -15,7 +15,7 @@ tinymbc.py [-h] [-v] [-s SERVER] [-u UNITID] [-o {table,plain}]
 Perform a read or write operation on some Modbus TCP server
 
 positional arguments:
-  {read,write}          operation to perform ('write' is not implemented yet)
+  {read,write}          operation to perform
   registers             group of registers[=values] to read/write from/to;
                         grouping is only supported for read-operations. See
                         examples below.
