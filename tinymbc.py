@@ -124,13 +124,22 @@ def performWrite(regGroups, args, client):
         regStrings = regGroup.split("=")
         if len(regStrings)==2:
             addr = stringToValidAddress(regStrings[0])
-            val  = stringToValidValue(regStrings[1])
+            regVals = regStrings[1].split(";")
+            vals = []
+            for regVal in regVals:
+              vals.append(stringToValidValue(regVal))
         else:
             if (args.verbose): print("Unable to parse register group! Will skip this one")
             continue
         
         # let the working client actually write
-        results = client.writeSingleReg(address=addr, value=val)
+        if len(vals) == 1:
+            results = client.writeSingleReg(address=addr, value=vals[0])
+        elif len(vals) > 1:
+            results = client.writeMultiRegs(address=addr, values=vals)
+        elif (args.verbose):
+            print("Found no vals to transmit! Will skip this one")
+            continue
         
         if (args.verbose): print("Raw response:", results)
 
@@ -236,7 +245,7 @@ class client:
         # construct and send request
         request = array('B', [0, self.transactionID, 0, 0, 0, MSG_LENGTH,         # header
                               self.unitid, FUNCTION_CODE, addHi, addLo])          # message
-        request.extend(value)
+        request.extend(value)                                                     # payload
         self.sock.send(request)
 
         # get response
@@ -244,6 +253,40 @@ class client:
         self.sock.recv_into(buffer)
         # \todo: error handling
         return(buffer)
+    
+    def writeMultiRegs(self, address, values):
+        FUNCTION_CODE = 16
+
+        # calculate bytes required for construction of request
+        addHi = address >> 8
+        addLo = address & 0x00FF
+
+        payload = b''
+        for value in values:
+            payload = payload + pack('>H', int(value))
+
+        nr_of_regs = int(len(payload) / 2)                      # nr of 16bit registers to write
+        lenHi = nr_of_regs >> 8
+        lenLo = nr_of_regs & 0x00FF
+        pl_length = len(payload)                                # nr of bytes to write
+        msg_length = 7 + pl_length
+
+        if self.transactionID < 255: 
+            self.transactionID = self.transactionID + 1
+        else: self.transactionID = 1
+
+        # construct and send request
+        request = array('B', [0, self.transactionID, 0, 0, 0, msg_length,                # header
+                    self.unitid, FUNCTION_CODE, addHi, addLo, lenHi, lenLo, pl_length])  # message
+        request.extend(payload)                                                          # payload
+        self.sock.send(request)
+
+        # get response
+        buffer = array('B', [0] * 20)
+        self.sock.recv_into(buffer)
+        # \todo: error handling
+        return(buffer)
+
 
 class ReadoutResultSet:
     def __init__(self, start, length, results):
